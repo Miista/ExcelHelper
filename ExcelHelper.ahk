@@ -8,6 +8,7 @@
 id := 0
 window := unset
 DEBUG := !A_IsCompiled
+selectParentWindowHwnd := unset
 
 #HotIf DEBUG
 F5::Reload
@@ -67,8 +68,7 @@ HideWindow()
 F12::
 {
     global id := WinGetID("A")
-
-    global selectParentMode := false
+    global selectParentWindowHwnd := unset
 
     Render()
 }
@@ -110,26 +110,18 @@ F12::
 }
 #HotIf
 
-; Use window ID instead
-#HotIf WinActive("Links and Attachments")
+; This is only active when reparenting a work item
+#HotIf WinActive("Links and Attachments") == selectParentWindowHwnd
 F12::
 {
-    global id, selectParentMode
+    global id
 
-    if (selectParentMode == false)
-    {
-        return
-    }
-    else
-    {
-        selectParentMode := false
-        Send "^+{Tab}" ; Navigate to 
-        Send "{Left 2}"
-        Send "{Space}"
-        Send "{Tab}"
+    Send "^+{Tab}" ; Navigate to 
+    Send "{Left 2}"
+    Send "{Space}"
+    Send "{Tab}"
 
-        SuggestFillWorkItemIDs()
-    }
+    SuggestFillWorkItemIDs()
 }
 #HotIf
 
@@ -195,15 +187,16 @@ global selectParentMode := false
 
 ReparentWorkItem()
 {
-    global id, selectParentMode
+    global id, selectParentWindowHwnd
 
     WinActivate(id)
-    linkToWindow := OpenLinkToDialog()
+    result := OpenLinkToDialog()
+    linkToWindow := result.Item1
     WinActivate(linkToWindow)
 
     Send "p" ; Select "Parent" link type
 
-    linkTypeHwnd := ControlGetFocus("ahk_id " . linkToWindow)
+    linkTypeHwnd := ControlGetFocus(linkToWindow)
     selectedText := ControlGetText(linkTypeHwnd)
 
     if (selectedText != "Parent")
@@ -213,7 +206,7 @@ ReparentWorkItem()
 
         Send "{Tab 3}" ; Navigate to the link control
         MsgBox("The work item already has a parent.`n`nPlease select the parent in the list and press F12 to reparent.", "Select existing parent", 48)
-        selectParentMode := true
+        selectParentWindowHwnd := result.Item2 ; Store the links window handle
         return
     }
     else
@@ -366,7 +359,7 @@ OpenLinkToDialog()
     addLinkWindowHwnd := WinActivateWait("Add Link to")
     Send "{Home}"
 
-    return addLinkWindowHwnd
+    return Tuple(addLinkWindowHwnd, linksWindow)
 }
 
 AddRelated()
@@ -374,7 +367,8 @@ AddRelated()
     global id
 
     WinActivate(id)
-    linkToWindow := OpenLinkToDialog()
+    result := OpenLinkToDialog()
+    linkToWindow := result.Item1
     WinActivate(linkToWindow)
 
     Send "{r 3}"
@@ -395,7 +389,8 @@ AddPredecessor()
     global id
 
     WinActivate(id)
-    linkToWindow := OpenLinkToDialog()
+    result := OpenLinkToDialog()
+    linkToWindow := result.Item1
     WinActivate(linkToWindow)
 
     Send "{p 2}"
@@ -416,7 +411,8 @@ AddSuccessor()
     global id
 
     WinActivate(id)
-    linkToWindow := OpenLinkToDialog()
+    result := OpenLinkToDialog()
+    linkToWindow := result.Item1
     WinActivate(linkToWindow)
 
     Send "{s 3}"
@@ -456,5 +452,7 @@ ExecuteTeamCommand(command)
 WinActivateWait(title)
 {
     windowHwnd := WinWaitActive(title)
-    return WinActivate(windowHwnd)
+    WinActivate(windowHwnd)
+
+    return windowHwnd
 }
