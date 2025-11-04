@@ -76,8 +76,6 @@ F12::
 ; Ctrl + Shift + F12
 ^>+F12::
 {
-    Sleep 100
-
     global id := WinGetID("A")
 
     Publish()
@@ -86,8 +84,6 @@ F12::
 ; Ctrl + F12
 ^F12::
 {
-    Sleep 500
-    
     global id := WinGetID("A")
 
     GetWorkItems()
@@ -96,8 +92,6 @@ F12::
 ; Alt-Gr + F12
 <^>!F12::
 {
-    Sleep 100
-
     global id := WinGetID("A")
 
     OpenInWeb()
@@ -207,9 +201,7 @@ ReparentWorkItem()
     linkToWindow := OpenLinkToDialog()
     WinActivate(linkToWindow)
 
-    Send "p"
-
-    ;Sleep 500
+    Send "p" ; Select "Parent" link type
 
     linkTypeHwnd := ControlGetFocus("ahk_id " . linkToWindow)
     selectedText := ControlGetText(linkTypeHwnd)
@@ -217,8 +209,9 @@ ReparentWorkItem()
     if (selectedText != "Parent")
     {
         Send "{Esc}"
-        Sleep 50
-        Send "{Tab 3}"
+        WinWaitActive(linkToWindow)
+
+        Send "{Tab 3}" ; Navigate to the link control
         MsgBox("The work item already has a parent.`n`nPlease select the parent in the list and press F12 to reparent.", "Select existing parent", 48)
         selectParentMode := true
         return
@@ -235,10 +228,7 @@ Publish()
     global id
 
     WinActivate(id)
-    Send "{Alt down}"
-    Send "{Alt up}"
-    Sleep 50
-    Send "y2p"
+    ExecuteTeamCommand("y2p")
 }
 
 Refresh()
@@ -246,10 +236,7 @@ Refresh()
     global id
 
     WinActivate(id)
-    Send "{Alt down}"
-    Send "{Alt up}"
-    Sleep 50
-    Send "y2r"
+    ExecuteTeamCommand("y2r")
 }
 
 AddTreeLevel()
@@ -257,10 +244,7 @@ AddTreeLevel()
     global id
 
     WinActivate(id)
-    Send "{Alt down}"
-    Send "{Alt up}"
-    Sleep 50
-    Send "y2a"
+    ExecuteTeamCommand("y2a")
 
     addTreeLevelWindow := WinWaitActive("Convert to Tree List")
     WinActivate(addTreeLevelWindow)
@@ -272,10 +256,7 @@ GetWorkItems()
     global id
 
     WinActivate(id)
-    Send "{Alt down}"
-    Send "{Alt up}"
-    Sleep 50
-    Send "y2g"
+    ExecuteTeamCommand("y2g")
 
     getWorkItemsWindow := WinWaitActive("Get Work Items")
     WinActivate(getWorkItemsWindow)
@@ -372,10 +353,7 @@ FixRows()
 
 OpenLinksAndAttachments()
 {
-    Send "{Alt down}"
-    Send "{Alt up}"
-    Sleep 50
-    Send "y2l"
+    ExecuteTeamCommand("y2l")
 
     return WinWaitActive("Links and Attachments") 
 }
@@ -384,6 +362,7 @@ OpenLinkToDialog()
 {
     linksWindow := OpenLinksAndAttachments()
     WinActivate(linksWindow)
+    WinWaitActive(linksWindow)
     Send "!l"
 
     addLinkWindowHwnd := WinWaitActive("Add Link to")
@@ -462,10 +441,17 @@ OpenInWeb()
     global id
 
     WinActivate(id)
+    ExecuteTeamCommand("y2w")
+}
+
+; HELPER FUNCTIONS
+ExecuteTeamCommand(command)
+{
+    global id
+
+    WinActivate(id)
     Send "{Alt down}"
     Send "{Alt up}"
     Sleep 50
-    Send "y2"
-    Sleep 50
-    Send "w"
+    Send command
 }
