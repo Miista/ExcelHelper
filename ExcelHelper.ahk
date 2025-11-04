@@ -246,8 +246,7 @@ AddTreeLevel()
     WinActivate(id)
     ExecuteTeamCommand("y2a")
 
-    addTreeLevelWindow := WinWaitActive("Convert to Tree List")
-    WinActivate(addTreeLevelWindow)
+    WinActivateWait("Convert to Tree List")
     Send "{Enter}"
 }
 
@@ -257,9 +256,7 @@ GetWorkItems()
 
     WinActivate(id)
     ExecuteTeamCommand("y2g")
-
-    getWorkItemsWindow := WinWaitActive("Get Work Items")
-    WinActivate(getWorkItemsWindow)
+    WinActivateWait("Get Work Items")
 
     ; Make sure the "IDs" radio button is selected
     Send "{Alt down}ii{Alt up}"
@@ -355,7 +352,7 @@ OpenLinksAndAttachments()
 {
     ExecuteTeamCommand("y2l")
 
-    return WinWaitActive("Links and Attachments") 
+    return WinActivateWait("Links and Attachments") 
 }
 
 OpenLinkToDialog()
@@ -365,8 +362,7 @@ OpenLinkToDialog()
     WinWaitActive(linksWindow)
     Send "!l"
 
-    addLinkWindowHwnd := WinWaitActive("Add Link to")
-    WinActivate(addLinkWindowHwnd)
+    addLinkWindowHwnd := WinActivateWait("Add Link to")
     Send "{Home}"
 
     return addLinkWindowHwnd
@@ -454,4 +450,10 @@ ExecuteTeamCommand(command)
     Send "{Alt up}"
     Sleep 50
     Send command
+}
+
+WinActivateWait(title)
+{
+    windowHwnd := WinWaitActive(title)
+    return WinActivate(windowHwnd)
 }
