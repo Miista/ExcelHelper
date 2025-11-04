@@ -116,6 +116,7 @@ F12::
 }
 #HotIf
 
+; Use window ID instead
 #HotIf WinActive("Links and Attachments")
 F12::
 {
@@ -128,7 +129,7 @@ F12::
     else
     {
         selectParentMode := false
-        Send "^+{Tab}"
+        Send "^+{Tab}" ; Navigate to 
         Send "{Left 2}"
         Send "{Space}"
         Send "{Tab}"
@@ -203,13 +204,14 @@ ReparentWorkItem()
     global id, selectParentMode
 
     WinActivate(id)
-    linkWindow := OpenLinkToDialog()
+    linkToWindow := OpenLinkToDialog()
+    WinActivate(linkToWindow)
 
-    Send "{p}"
+    Send "p"
 
-    Sleep 500
+    ;Sleep 500
 
-    linkTypeHwnd := ControlGetFocus("ahk_id " . linkWindow)
+    linkTypeHwnd := ControlGetFocus("ahk_id " . linkToWindow)
     selectedText := ControlGetText(linkTypeHwnd)
 
     if (selectedText != "Parent")
@@ -221,10 +223,11 @@ ReparentWorkItem()
         selectParentMode := true
         return
     }
-
-    Send "{Tab}"
-
-    SuggestFillWorkItemIDs()
+    else
+    {
+        Send "{Tab}"
+        SuggestFillWorkItemIDs()
+    }
 }
 
 Publish()
@@ -259,12 +262,9 @@ AddTreeLevel()
     Sleep 50
     Send "y2a"
 
-    Sleep 500
-
-    if (WinActive("Convert to Tree List"))
-    {
-        Send "{Enter}"
-    }
+    addTreeLevelWindow := WinWaitActive("Convert to Tree List")
+    WinActivate(addTreeLevelWindow)
+    Send "{Enter}"
 }
 
 GetWorkItems()
@@ -276,10 +276,12 @@ GetWorkItems()
     Send "{Alt up}"
     Sleep 50
     Send "y2g"
-    Sleep 50
-    Send "{Alt down}"
-    Send "ii"
-    Send "{Alt up}"
+
+    getWorkItemsWindow := WinWaitActive("Get Work Items")
+    WinActivate(getWorkItemsWindow)
+
+    ; Make sure the "IDs" radio button is selected
+    Send "{Alt down}ii{Alt up}"
     Send "{Tab}"
 
     suggestedWorkItemIDs := GetSuggestedWorkItemIDs()
@@ -375,22 +377,18 @@ OpenLinksAndAttachments()
     Sleep 50
     Send "y2l"
 
-    linksWindowHwnd := WinWaitActive("Links and Attachments")
-    return linksWindowHwnd
+    return WinWaitActive("Links and Attachments") 
 }
 
 OpenLinkToDialog()
 {
-    OpenLinksAndAttachments()
-    Sleep 500
-    Send "{Alt down}"
-    Send "l"
-    Send "{Alt up}"
-    Sleep 50
+    linksWindow := OpenLinksAndAttachments()
+    WinActivate(linksWindow)
+    Send "!l"
 
     addLinkWindowHwnd := WinWaitActive("Add Link to")
+    WinActivate(addLinkWindowHwnd)
     Send "{Home}"
-    Sleep 50
 
     return addLinkWindowHwnd
 }
@@ -400,10 +398,9 @@ AddRelated()
     global id
 
     WinActivate(id)
-    OpenLinkToDialog()
+    linkToWindow := OpenLinkToDialog()
+    WinActivate(linkToWindow)
 
-    Sleep 50
-    Send "{Home}"
     Send "{r 3}"
     Send "{Tab}"
 
@@ -422,10 +419,9 @@ AddPredecessor()
     global id
 
     WinActivate(id)
-    OpenLinkToDialog()
+    linkToWindow := OpenLinkToDialog()
+    WinActivate(linkToWindow)
 
-    Sleep 50
-    Send "{Home}"
     Send "{p 2}"
     Send "{Tab}"
 
@@ -444,10 +440,9 @@ AddSuccessor()
     global id
 
     WinActivate(id)
-    OpenLinkToDialog()
+    linkToWindow := OpenLinkToDialog()
+    WinActivate(linkToWindow)
 
-    Sleep 50
-    Send "{Home}"
     Send "{s 3}"
     Send "{Tab}"
 
