@@ -360,6 +360,7 @@ OpenLinkToDialog()
     linksWindow := OpenLinksAndAttachments()
     WinActivate(linksWindow)
     WinWaitActive(linksWindow)
+    Sleep 50
     Send "!l"
 
     addLinkWindowHwnd := WinActivateWait("Add Link to")
