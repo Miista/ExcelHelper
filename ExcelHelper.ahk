@@ -10,6 +10,16 @@ window := unset
 DEBUG := !A_IsCompiled
 selectParentWindowHwnd := unset
 
+; GLOBALS
+global WindowTitles := {
+    CreateWorkItem: "Create Work Item.xlsx ahk_exe EXCEL.EXE ahk_class XLMAIN",
+    LinksAndAttachmentsPrefix: "Links and Attachments",
+    AddLinkPrefix: "Add Link to",
+    GetWorkItems: "Get Work Items",
+    ConvertToTreeList: "Convert to Tree List",
+    EditLink: "Edit Link",
+}
+
 #HotIf DEBUG
 F5::Reload
 
@@ -64,7 +74,7 @@ HideWindow()
     window := unset
 }
 
-#HotIf WinActive("Create Work Item.xlsx ahk_exe EXCEL.EXE ahk_class XLMAIN")
+#HotIf WinActive(WindowTitles.CreateWorkItem)
 F12::
 {
     global id := WinGetID("A")
@@ -111,7 +121,7 @@ F12::
 #HotIf
 
 ; This is only active when reparenting a work item
-#HotIf WinActive("Links and Attachments") == selectParentWindowHwnd
+#HotIf WinActive(WindowTitles.LinksAndAttachmentsPrefix) == selectParentWindowHwnd
 F12::
 {
     global id
@@ -120,7 +130,7 @@ F12::
     Send "{Left 2}"
     Send "{Space}"
 
-    WinActivateWait("Edit Link")
+    WinActivateWait(WindowTitles.EditLink)
 
     Send "{Tab}"
 
@@ -173,7 +183,7 @@ ApplySuggestedWorkItemIDs(suggestedIds)
         Send StrReplace(suggestedIds.Value, ";", ",")
         Send "{Enter}"
 
-        windowClosed := WinWaitClose("Add Link to", , 0.5)
+        windowClosed := WinWaitClose(WindowTitles.AddLinkPrefix, , 0.5)
 
         if (windowClosed)
         {
@@ -184,7 +194,7 @@ ApplySuggestedWorkItemIDs(suggestedIds)
         HandleErrors()
 
         ; Check again if the window is closed
-        windowClosed := WinWaitClose("Add Link to", , 0.5)
+        windowClosed := WinWaitClose(WindowTitles.AddLinkPrefix, , 0.5)
 
         if (windowClosed)
         {
@@ -208,10 +218,10 @@ ApplySuggestedWorkItemIDs(suggestedIds)
             ; Resolution: The duplicate links are removed automatically when pressing Enter
             Send "{Esc}" ; Dismiss error dialog
 
-            WinActivateWait("Add Link to")
+            WinActivateWait(WindowTitles.AddLinkPrefix)
             Send "{Enter}" ; Try to submit again
 
-            windowClosed := WinWaitClose("Add Link to", , 0.5)
+            windowClosed := WinWaitClose(WindowTitles.AddLinkPrefix, , 0.5)
 
             if (!windowClosed)
             {
@@ -223,7 +233,7 @@ ApplySuggestedWorkItemIDs(suggestedIds)
 
                     MsgBox("It would seem that the work item is already linked to the specified work items. Close this dialog to continue.", "All links exist!", 64)
 
-                    WinWaitActive("Add Link to")
+                    WinWaitActive(WindowTitles.AddLinkPrefix)
                     Send "{Esc}" ; Close the Add Link to window
 
                     return true
@@ -324,7 +334,7 @@ AddTreeLevel()
     WinActivate(id)
     ExecuteTeamCommand("y2a")
 
-    WinActivateWait("Convert to Tree List")
+    WinActivateWait(WindowTitles.ConvertToTreeList)
     Send "{Enter}"
 }
 
@@ -334,7 +344,7 @@ GetWorkItems()
 
     WinActivate(id)
     ExecuteTeamCommand("y2g")
-    WinActivateWait("Get Work Items")
+    WinActivateWait(WindowTitles.GetWorkItems)
 
     ; Make sure the "IDs" radio button is selected
     Send "{Alt down}ii{Alt up}"
@@ -430,7 +440,7 @@ OpenLinksAndAttachments()
 {
     ExecuteTeamCommand("y2l")
 
-    return WinActivateWait("Links and Attachments") 
+    return WinActivateWait(WindowTitles.LinksAndAttachmentsPrefix)
 }
 
 OpenLinkToDialog()
@@ -442,7 +452,7 @@ OpenLinkToDialog()
     Sleep 50
     Send "!l"
 
-    addLinkWindowHwnd := WinActivateWait("Add Link to")
+    addLinkWindowHwnd := WinActivateWait(WindowTitles.AddLinkPrefix)
     Send "{Home}"
 
     return {
@@ -454,7 +464,7 @@ OpenLinkToDialog()
     TryGetCurrentWorkItemId(linksWindow)
     {
         windowTitle := WinGetTitle(linksWindow)
-        foundMatch := RegExMatch(windowTitle, "i)Links and Attachments for (?:[A-Za-z]+) (\d+)", &workItemId)
+        foundMatch := RegExMatch(windowTitle, "i)" . WindowTitles.LinksAndAttachmentsPrefix . " for (?:[A-Za-z]+) (\d+)", &workItemId)
 
         if (foundMatch)
         {
