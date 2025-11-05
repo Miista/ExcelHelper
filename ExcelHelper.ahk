@@ -119,6 +119,9 @@ F12::
     Send "^+{Tab}" ; Navigate to 
     Send "{Left 2}"
     Send "{Space}"
+
+    WinActivateWait("Edit Link")
+
     Send "{Tab}"
 
     filled := SuggestFillWorkItemIDs()
@@ -132,11 +135,11 @@ F12::
 }
 #HotIf
 
-GetSuggestedWorkItemIDs()
+GetSuggestedWorkItemIDs(currentWorkItemId := "")
 {
     Sleep 500
     clipboardCopy := A_Clipboard
-    result := TryParseIDs(clipboardCopy)
+    result := TryParseIDs(clipboardCopy, currentWorkItemId)
 
     ; If the value in the clipboard looks like a work item ID, ask whether to use it
     if (result.Success)
@@ -169,15 +172,82 @@ ApplySuggestedWorkItemIDs(suggestedIds)
     {
         Send StrReplace(suggestedIds.Value, ";", ",")
         Send "{Enter}"
-        return true
+
+        windowClosed := WinWaitClose("Add Link to", , 0.5)
+
+        if (windowClosed)
+        {
+            return true
+        }
+
+        ; If the window hasn't closed, an error dialog is most likely displayed on the screen.
+        HandleErrors()
+
+        ; Check again if the window is closed
+        windowClosed := WinWaitClose("Add Link to", , 0.5)
+
+        if (windowClosed)
+        {
+            return true
+        }
+
+        if (!windowClosed)
+        {
+            MsgBox("Failed to add work item links. Changes will not be published automatically.", "Warning", 48)
+            return false
+        }
     }
 
     return false
+
+    HandleErrors()
+    {
+        if (InStr(GetActiveWindowText(), "TF207015"))
+        {
+            ; TF207015: The current work item already contains links to the following work items:
+            ; Resolution: The duplicate links are removed automatically when pressing Enter
+            Send "{Esc}" ; Dismiss error dialog
+
+            WinActivateWait("Add Link to")
+            Send "{Enter}" ; Try to submit again
+
+            windowClosed := WinWaitClose("Add Link to", , 0.5)
+
+            if (!windowClosed)
+            {
+                newText := GetActiveWindowText()
+
+                if (InStr(newText, "TF207015"))
+                {
+                    Send "{Esc}" ; Dismiss error dialog
+
+                    MsgBox("It would seem that the work item is already linked to the specified work items. Close this dialog to continue.", "All links exist!", 64)
+
+                    WinWaitActive("Add Link to")
+                    Send "{Esc}" ; Close the Add Link to window
+
+                    return true
+                }
+
+                MsgBox("Failed to add work item links. Changes will not be published automatically.", "Warning", 48)
+
+                return false
+            }
+        }
+
+        GetActiveWindowText()
+        {
+            activeWindowHwnd := WinGetID("A")
+            windowText := WinGetText(activeWindowHwnd)
+
+            return windowText
+        }
+    }
 }
 
-SuggestFillWorkItemIDs()
+SuggestFillWorkItemIDs(currentWorkItemId := "")
 {
-    suggestedIds := GetSuggestedWorkItemIDs()
+    suggestedIds := GetSuggestedWorkItemIDs(currentWorkItemId)
     return ApplySuggestedWorkItemIDs(suggestedIds)
 }
 
@@ -198,7 +268,7 @@ ReparentWorkItem()
 
     WinActivate(id)
     result := OpenLinkToDialog()
-    linkToWindow := result.Item1
+    linkToWindow := result.AddLinkWindowHwnd
     WinActivate(linkToWindow)
 
     Send "p" ; Select "Parent" link type
@@ -208,12 +278,13 @@ ReparentWorkItem()
 
     if (selectedText != "Parent")
     {
+        ; Not able to select Parent link type, so go back to the Links and Attachments window
         Send "{Esc}"
         WinWaitActive(linkToWindow)
 
         Send "{Tab 3}" ; Navigate to the link control
         MsgBox("The work item already has a parent.`n`nPlease select the parent in the list and press F12 to reparent.", "Select existing parent", 48)
-        selectParentWindowHwnd := result.Item2 ; Store the links window handle
+        selectParentWindowHwnd := result.LinksWindow ; Store the links window handle
         return
     }
     else
@@ -280,7 +351,7 @@ GetWorkItems()
     }
 }
 
-TryParseIDs(clipboardCopy)
+TryParseIDs(clipboardCopy, currentWorkItemId := "")
 {
     delimiters := Array(";", "`n")
     trimChars := " `r`n"
@@ -328,7 +399,7 @@ TryParseIDs(clipboardCopy)
         return Result.Error()
     }
 
-    lines := ArrayExcept(lines, (value) => value == "")
+    lines := ArrayExcept(lines, (value) => value == "" or value == currentWorkItemId)
     
     if (ArrayAll(lines, (value) => TryParseInteger(value, &out)))
     {
@@ -366,6 +437,7 @@ OpenLinkToDialog()
 {
     linksWindow := OpenLinksAndAttachments()
     WinActivate(linksWindow)
+    workItemId := TryGetCurrentWorkItemId(linksWindow)
     WinWaitActive(linksWindow)
     Sleep 50
     Send "!l"
@@ -373,7 +445,27 @@ OpenLinkToDialog()
     addLinkWindowHwnd := WinActivateWait("Add Link to")
     Send "{Home}"
 
-    return Tuple(addLinkWindowHwnd, linksWindow)
+    return {
+        AddLinkWindowHwnd: addLinkWindowHwnd,
+        LinksWindow: linksWindow,
+        WorkItemId: workItemId
+    }
+
+    TryGetCurrentWorkItemId(linksWindow)
+    {
+        windowTitle := WinGetTitle(linksWindow)
+        foundMatch := RegExMatch(windowTitle, "i)Links and Attachments for (?:[A-Za-z]+) (\d+)", &workItemId)
+
+        if (foundMatch)
+        {
+            ; The first match is the work item ID
+            return workItemId.1
+        }
+        else
+        {
+            return false
+        }
+    }
 }
 
 AddRelated()
@@ -382,17 +474,17 @@ AddRelated()
 
     WinActivate(id)
     result := OpenLinkToDialog()
-    linkToWindow := result.Item1
+    linkToWindow := result.AddLinkWindowHwnd
     WinActivate(linkToWindow)
 
     Send "{r 3}"
     Send "{Tab}"
 
-    filled := SuggestFillWorkItemIDs()
+    filled := SuggestFillWorkItemIDs(result.WorkItemId)
 
     if (filled)
     {
-        Sleep 50
+        Sleep 250
         Send "!p"
         Send "{Esc}"
     }
@@ -404,13 +496,13 @@ AddPredecessor()
 
     WinActivate(id)
     result := OpenLinkToDialog()
-    linkToWindow := result.Item1
+    linkToWindow := result.AddLinkWindowHwnd
     WinActivate(linkToWindow)
 
     Send "{p 2}"
     Send "{Tab}"
 
-    filled := SuggestFillWorkItemIDs()
+    filled := SuggestFillWorkItemIDs(result.WorkItemId)
 
     if (filled)
     {
@@ -426,14 +518,14 @@ AddSuccessor()
 
     WinActivate(id)
     result := OpenLinkToDialog()
-    linkToWindow := result.Item1
+    linkToWindow := result.AddLinkWindowHwnd
     WinActivate(linkToWindow)
 
     Send "{s 3}"
     Send "{Tab}"
 
     Sleep 150
-    filled := SuggestFillWorkItemIDs()
+    filled := SuggestFillWorkItemIDs(result.WorkItemId)
 
     if (filled)
     {
