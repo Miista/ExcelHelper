@@ -121,7 +121,14 @@ F12::
     Send "{Space}"
     Send "{Tab}"
 
-    SuggestFillWorkItemIDs()
+    filled := SuggestFillWorkItemIDs()
+
+    if (filled)
+    {
+        Sleep 50
+        Send "!p"
+        Send "{Esc}"
+    }
 }
 #HotIf
 
@@ -212,7 +219,14 @@ ReparentWorkItem()
     else
     {
         Send "{Tab}"
-        SuggestFillWorkItemIDs()
+        filled := SuggestFillWorkItemIDs()
+
+        if (filled)
+        {
+            Sleep 50
+            Send "!p"
+            Send "{Esc}"
+        }
     }
 }
 
