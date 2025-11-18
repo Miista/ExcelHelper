@@ -121,10 +121,10 @@ F12::
 #HotIf
 
 ; This is only active when reparenting a work item
-#HotIf WinActive(WindowTitles.LinksAndAttachmentsPrefix) == selectParentWindowHwnd
+#HotIf IsSet(selectParentWindowHwnd) && WinActive(WindowTitles.LinksAndAttachmentsPrefix) == selectParentWindowHwnd
 F12::
 {
-    global id
+    global id, selectParentWindowHwnd
 
     Send "^+{Tab}" ; Navigate to 
     Send "{Left 2}"
@@ -141,6 +141,7 @@ F12::
         Sleep 50
         Send "!p"
         Send "{Esc}"
+        selectParentWindowHwnd := unset
     }
 }
 #HotIf
