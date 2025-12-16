@@ -39,6 +39,9 @@ Render()
     getWorkItemsButton := window.AddButton("", "&Get Work Items (Ctrl + F12)")
     getWorkItemsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => GetWorkItems()]))
 
+    getWorkItemsInQueryButton := window.AddButton("", "Get Work Items Pending Estimation (&Q)")
+    getWorkItemsInQueryButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => GetWorkItemsPendingEstimation()]))
+
     addTreeLevelButton := window.AddButton("", "Add &Tree Level")
     addTreeLevelButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => AddTreeLevel()]))
 
@@ -360,6 +363,40 @@ GetWorkItems()
         Send "{Space}"
         Send "{Enter}"
     }
+}
+
+GetWorkItemsPendingEstimation()
+{
+    global id
+
+    WinActivate(id)
+    ExecuteTeamCommand("y2g")
+    WinActivateWait(WindowTitles.GetWorkItems)
+
+    Send "{Alt down}qq{Alt up}"
+    Send "{Tab}"
+
+    ; Open the query dropdown
+    Send "{Down}"
+    Send "{PgUp}"
+
+    ; Open "Travel Retail"
+    Send "Travel"
+    Send "{NumpadSub}"
+    Send "{NumpadAdd}"
+
+    ; Open "My Queries"
+    Send "My"
+    Send "{NumpadSub}"
+    Send "{NumpadAdd}"
+
+    ; Select "Commerce Ops Pending Estimation"
+    Send "Commerce"
+    Send "{Enter}"
+
+    Send "!n"
+    Send "!s"
+    Send "{Enter}"
 }
 
 TryParseIDs(clipboardCopy, currentWorkItemId := "")
