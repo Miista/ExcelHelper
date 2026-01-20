@@ -41,3 +41,43 @@ ArrayExcept(array, fn)
 
     return newArray
 }
+
+/**
+ * Filters an array to contain only elements that satisfy a given condition.
+ * @param {Array} array - The original array.
+ * @param {Function} fn - The function to determine which elements to keep.
+ * @returns {Array} - The new array with included elements.
+ */
+ArrayFilter(array, fn)
+{
+    newArray := []
+
+    for _, value in array
+    {
+        if (fn(value))
+        {
+            newArray.Push(value)
+        }
+    }
+
+    return newArray
+}
+
+/**
+ * Maps the given function over all elements in an array.
+ * @param {Array} array - The original array.
+ * @param {Function} fn - The mapping function.
+ * @returns {Array} - The new array with mapped elements.
+ */
+ArrayMap(array, fn)
+{
+    newArray := []
+
+    for _, value in array
+    {
+        newValue := fn(value)
+        newArray.Push(newValue)
+    }
+
+    return newArray
+}

@@ -1,6 +1,7 @@
 ﻿#Requires AutoHotkey v2.0
 #Include <Sequence>
 #Include <StrConcat>
+#Include <StrInterpolate>
 #Include <TryParseInteger>
 #Include <Array>
 #Include <Result>
@@ -10,6 +11,8 @@ window := unset
 DEBUG := !A_IsCompiled
 selectParentWindowHwnd := unset
 
+lastColumnSpecification := ""
+
 ; GLOBALS
 global WindowTitles := {
     CreateWorkItem: "Create Work Item.xlsx ahk_exe EXCEL.EXE ahk_class XLMAIN",
@@ -18,6 +21,11 @@ global WindowTitles := {
     GetWorkItems: "Get Work Items",
     ConvertToTreeList: "Convert to Tree List",
     EditLink: "Edit Link",
+    RulesManager: "Conditional Formatting Rules Manager",
+    NewRule: "New Formatting Rule",
+    EditRule: "Edit Formatting Rule",
+    FormatCells: "Format Cells",
+    Colors: "Colors"
 }
 
 #HotIf DEBUG
@@ -65,6 +73,12 @@ Render()
 
     reparentButton := window.AddButton("", "R&eparent")
     reparentButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => ReparentWorkItem()]))
+
+    highlightWorkFieldsButton := window.AddButton("", "&Highlight Work Item Fields")
+    highlightWorkFieldsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => HighlightWorkItemFields()]))
+
+    removeHighlightWorkFieldsButton := window.AddButton("", "Remove Highlight Work Item Fiel&ds")
+    removeHighlightWorkFieldsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => RemoveHighlightWorkItemFields()]))
 
     window.Show()
 }
@@ -589,6 +603,229 @@ OpenInWeb()
 
     WinActivate(id)
     ExecuteTeamCommand("y2w")
+}
+
+HighlightWorkItemFields()
+{
+    global id, lastColumnSpecification
+
+    columns := GetColumns()
+    workItemTypeColumn := columns[1]
+    remainingWorkColumn := columns[2]
+    originalEstimateColumn := columns[3]
+
+    rulePattern := "=AND(${1}1=`"Task`";${2}1=`"`")"
+    remainingWorkRule := GenerateRule(rulePattern, workItemTypeColumn, remainingWorkColumn)
+    originalEstimateRule := GenerateRule(rulePattern, workItemTypeColumn, originalEstimateColumn)
+
+    rangePattern := "=${1}:${1}"
+    remainingWorkRange := GenerateRange(rangePattern, remainingWorkColumn)
+    originalEstimateRange := GenerateRange(rangePattern, originalEstimateColumn)
+
+    ruleFillColor := "#FF5151"
+
+    WinActivate(id)
+    ExecuteTeamCommand("hlr")
+
+    WinActivateWait(WindowTitles.RulesManager)
+    AddRule(remainingWorkRule, remainingWorkRange, ruleFillColor)
+
+    WinActivateWait(WindowTitles.RulesManager)
+    AddRule(originalEstimateRule, originalEstimateRange, ruleFillColor)
+
+    ; Navigate to "Apply"
+    WinActivateWait(WindowTitles.RulesManager)
+    Send "!s"
+    Send "{Escape}"
+    Send "+{Tab}"
+    Send "{Space}"
+    Send "{Escape}"
+
+    GetColumns()
+    {
+        ib := InputBox("Specify the columns for Work Item Type, Remaining Work, and Original Estimate in that order. Separate with comma.", "Specify columns",, lastColumnSpecification)
+
+        if (ib.Result == "Cancel")
+        {
+            return
+        }
+
+        lastColumnSpecification := ib.Value
+        columns := SplitColumns(ib.Value)
+
+        return columns
+    }
+
+    GenerateRule(pattern, workItemColumn, targetColumn)
+    {
+        rule := StrInterpolate(pattern, [workItemColumn, targetColumn])
+        return rule
+    }
+
+    GenerateRange(pattern, column)
+    {
+        range := StrInterpolate(pattern, [column])
+        return range
+    }
+
+    SplitColumns(input)
+    {
+        columns := []
+
+        if (InStr(input, ",") == 0)
+        {
+            ; Split by character
+            columns := StrSplit(input)
+        }
+        else
+        {
+            ; Split by comma
+            columns := StrSplit(input, ",")
+        }
+
+        if (columns.Length < 3)
+        {
+            throw Error("Insufficient columns specified. You must specify at least three columns.")
+        }
+        
+        return ArrayMap(columns, (value) => StrUpper(Trim(value)))
+    }
+
+    AddRule(rule, range, color)
+    {
+        WinActivateWait(WindowTitles.RulesManager)
+        Send "!n"
+
+        WinActivateWait(WindowTitles.NewRule)
+        ; Sending End-Tab positions the cursor at the "Format values where this formula is true" input
+        Send "{End}"
+        Send "{Tab}"
+        SendText rule
+
+        SetColorFormatting(color)
+
+        WinActivateWait(WindowTitles.NewRule)
+        Send "!o" ; Apparently, Alt-O focuses the OK button
+        Send "{Enter}"
+
+        WinActivateWait(WindowTitles.RulesManager)
+        Send "{Tab}"
+        SendText range
+
+        /* It's crucial that we move focus away from the range input this.
+         * If we don't do this, then--when we return from creating the next rule--
+         * the window will freeze and turn white, crashing Excel.
+         * That's not ideal. So we kindly tab away from the input.
+         */
+        ; Tab away from the range input
+        Send "{LShift down}"
+        Send "{Tab}"
+        Send "{LShift up}"
+
+        /* For some reason, the newly added rule will--when applied--use some crazy row number
+         * like 154815158. I have no idea why.
+         * Anyway, to fix this, we need to edit the rule again and re-enter the correct rule.
+         */
+        Send "!e"
+        WinActivateWait(WindowTitles.EditRule)
+        Send "!o"
+        SendText rule
+        Send "{Enter}"
+    }
+
+    SetColorFormatting(color)
+    {
+        WinActivateWait(WindowTitles.NewRule)
+
+        ; Open Format Cells dialog
+        Send "!f"
+        WinActivateWait(WindowTitles.FormatCells)
+
+        SelectFillTab()
+
+        ; Select "More Colors..."
+        Send "!m"
+
+        WinActivateWait(WindowTitles.Colors)
+        Send "^{Tab}"
+        Send "!h" ; Move to Hex input
+        SendText color
+        Send "{Enter}"
+
+        WinActivateWait(WindowTitles.FormatCells)
+        Send "{Tab 4}" ; Move to OK button
+        Send "{Enter}"
+
+        SelectFillTab()
+        {
+            /* There are four tabs in the Format Cells dialog.
+             * They are:
+             *   1. Number
+             *   2. Font
+             *   3. Border
+             *   4. Fill
+             * 
+             * We need to make sure we are on the "Fill" tab.
+             * Unfortunately, there is no direct way to check which tab is active,
+             * and even if we are on the Fill tab, hitting Ctrl+Tab will cycle us through the tabs.
+             * 
+             * Therefore, we need to check which controls are visible.
+             * On the Fill tab, there are two "MSO Generic Control Container" controls visible.
+             * Thus, we cycle through the tabs until there are two such controls visible.
+             * 
+             * Fortunately, once we are on the Fill tab, we will still be on the Fill tab
+             * when we open the window again.
+             */
+            controls := WinGetControlsHwnd(WindowTitles.FormatCells)
+            controls := ArrayFilter(controls, (value) => ControlGetText(value) == "MSO Generic Control Container")
+
+            ; This check shortcircuits the "expensive" loop. I assume that it's expensive.
+            if (IsFillTab())
+            {
+                return true
+            }
+
+            while (!IsFillTab())
+            {
+                Send "^{Tab}"
+                Sleep 50
+            }
+
+            IsFillTab()
+            {
+                vs := []
+
+                for index, value in controls
+                {
+                    v := ControlGetVisible(value)
+                    if (v == true)
+                    {
+                        vs.Push(v)
+                    }
+                }
+
+                return vs.Length == 2
+            }
+        }
+    }
+}
+
+RemoveHighlightWorkItemFields()
+{
+    global id
+
+    WinActivate(id)
+
+    ExecuteTeamCommand("hlr")
+
+    WinActivateWait(WindowTitles.RulesManager)
+
+    loop 3
+    {
+        Send "!d"
+    }
+
+    Send "{Enter}"
 }
 
 ; HELPER FUNCTIONS
