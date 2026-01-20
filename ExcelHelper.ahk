@@ -613,10 +613,11 @@ HighlightWorkItemFields()
     workItemTypeColumn := columns[1]
     remainingWorkColumn := columns[2]
     originalEstimateColumn := columns[3]
+    stateColumn := columns[4]
 
-    rulePattern := "=AND(${1}1=`"Task`";${2}1=`"`")"
-    remainingWorkRule := GenerateRule(rulePattern, workItemTypeColumn, remainingWorkColumn)
-    originalEstimateRule := GenerateRule(rulePattern, workItemTypeColumn, originalEstimateColumn)
+    rulePattern := "=AND(${1}1=`"Task`";${2}1=`"`";${3}1<>`"Closed`"; ${3}1<>`"Removed`")"
+    remainingWorkRule := GenerateRule(rulePattern, workItemTypeColumn, remainingWorkColumn, stateColumn)
+    originalEstimateRule := GenerateRule(rulePattern, workItemTypeColumn, originalEstimateColumn, stateColumn)
 
     rangePattern := "=${1}:${1}"
     remainingWorkRange := GenerateRange(rangePattern, remainingWorkColumn)
@@ -643,7 +644,7 @@ HighlightWorkItemFields()
 
     GetColumns()
     {
-        ib := InputBox("Specify the columns for Work Item Type, Remaining Work, and Original Estimate in that order. Separate with comma.", "Specify columns",, lastColumnSpecification)
+        ib := InputBox("Specify the columns for Work Item Type, Remaining Work, and Original Estimate, State in that order. Separate with comma.", "Specify columns",, lastColumnSpecification)
 
         if (ib.Result == "Cancel")
         {
@@ -656,9 +657,9 @@ HighlightWorkItemFields()
         return columns
     }
 
-    GenerateRule(pattern, workItemColumn, targetColumn)
+    GenerateRule(pattern, workItemColumn, targetColumn, stateColumn)
     {
-        rule := StrInterpolate(pattern, [workItemColumn, targetColumn])
+        rule := StrInterpolate(pattern, [workItemColumn, targetColumn, stateColumn])
         return rule
     }
 
@@ -683,9 +684,9 @@ HighlightWorkItemFields()
             columns := StrSplit(input, ",")
         }
 
-        if (columns.Length < 3)
+        if (columns.Length < 4)
         {
-            throw Error("Insufficient columns specified. You must specify at least three columns.")
+            throw Error("Insufficient columns specified. You must specify at least four columns.")
         }
         
         return ArrayMap(columns, (value) => StrUpper(Trim(value)))
