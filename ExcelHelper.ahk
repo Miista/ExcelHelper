@@ -63,10 +63,10 @@ Render()
     openInWebButton := window.AddButton("", "&Open in Web (Alt-Gr + F12)")
     openInWebButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => OpenInWeb()]))
 
-    highlightWorkFieldsButton := window.AddButton("", "&Highlight Work Item Fields")
+    highlightWorkFieldsButton := window.AddButton("", "&Highlight Work Item Fields (Experimental)")
     highlightWorkFieldsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => HighlightWorkItemFields()]))
 
-    removeHighlightWorkFieldsButton := window.AddButton("", "Remove Highlight Work Item Fiel&ds")
+    removeHighlightWorkFieldsButton := window.AddButton("", "Remove Highlight Work Item Fiel&ds (Experimental)")
     removeHighlightWorkFieldsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => RemoveHighlightWorkItemFields()]))
 
     window.Show()
