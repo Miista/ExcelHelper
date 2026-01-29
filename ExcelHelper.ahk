@@ -203,11 +203,11 @@ F12::
     Send "{Left 2}"
     Send "{Space}"
 
-    WinActivateWait(WindowTitles.EditLink)
+    linkWindow := WinActivateWait(WindowTitles.EditLink)
 
     Send "{Tab}"
 
-    filled := SuggestFillWorkItemIDs_LinkWindow()
+    filled := SuggestFillWorkItemIDs_LinkWindow(linkWindow)
 
     if (filled)
     {
@@ -329,15 +329,15 @@ ApplySuggestedWorkItemIDs(suggestedIds)
     }
 }
 
-SuggestFillWorkItemIDs_LinkWindow(currentWorkItemId := "", windowHwnd := 0)
+SuggestFillWorkItemIDs_LinkWindow(linkToWindowHwnd, currentWorkItemId := "")
 {
     suggestedIds := GetSuggestedWorkItemIDs(currentWorkItemId)
 
-    /*if (windowHwnd != 0)
+    if (linkToWindowHwnd != 0)
     {
-        WinActivate(windowHwnd)
-        WinActivateWait(windowHwnd)
-    }*/
+        WinActivate(linkToWindowHwnd)
+        WinActivateWait(linkToWindowHwnd)
+    }
 
     return ApplySuggestedWorkItemIDs(suggestedIds)
 }
@@ -381,7 +381,7 @@ ReparentWorkItem()
     else
     {
         Send "{Tab}"
-        filled := SuggestFillWorkItemIDs_LinkWindow()
+        filled := SuggestFillWorkItemIDs_LinkWindow(linkToWindow)
 
         if (filled)
         {
@@ -605,7 +605,7 @@ AddRelated()
     Send "{r 3}"
     Send "{Tab}"
 
-    filled := SuggestFillWorkItemIDs_LinkWindow(result.WorkItemId, linkToWindow)
+    filled := SuggestFillWorkItemIDs_LinkWindow(linkToWindow, result.WorkItemId)
 
     if (filled)
     {
@@ -627,7 +627,7 @@ AddPredecessor()
     Send "{p 2}"
     Send "{Tab}"
 
-    filled := SuggestFillWorkItemIDs_LinkWindow(result.WorkItemId)
+    filled := SuggestFillWorkItemIDs_LinkWindow(linkToWindow, result.WorkItemId)
 
     if (filled)
     {
@@ -650,7 +650,7 @@ AddSuccessor()
     Send "{Tab}"
 
     Sleep 150
-    filled := SuggestFillWorkItemIDs_LinkWindow(result.WorkItemId)
+    filled := SuggestFillWorkItemIDs_LinkWindow(linkToWindow, result.WorkItemId)
 
     if (filled)
     {
