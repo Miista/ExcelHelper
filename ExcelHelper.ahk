@@ -92,7 +92,7 @@ RenderLinkManager()
     addSuccessorButton := subWindow.AddButton("", "&Successor")
     addSuccessorButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => AddSuccessor()]))
 
-    manageLinksButton := subWindow.AddButton("", "&Manage Links")
+    manageLinksButton := subWindow.AddButton("", "&Manage Links (F12)")
     manageLinksButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => ManageLinks()]))
 
     if (IsSet(window))
@@ -170,6 +170,14 @@ F12::
     global id := WinGetID("A")
 
     OpenInWeb()
+}
+#HotIf
+
+#HotIf IsSet(subWindow)
+F12::
+{
+    HideLinkManager(true)
+    ManageLinks()
 }
 #HotIf
 
@@ -321,9 +329,16 @@ ApplySuggestedWorkItemIDs(suggestedIds)
     }
 }
 
-SuggestFillWorkItemIDs(currentWorkItemId := "")
+SuggestFillWorkItemIDs(currentWorkItemId := "", windowHwnd := 0)
 {
     suggestedIds := GetSuggestedWorkItemIDs(currentWorkItemId)
+
+    if (windowHwnd != 0)
+    {
+        WinActivate(windowHwnd)
+        WinActivateWait(windowHwnd)
+    }
+
     return ApplySuggestedWorkItemIDs(suggestedIds)
 }
 
@@ -590,7 +605,7 @@ AddRelated()
     Send "{r 3}"
     Send "{Tab}"
 
-    filled := SuggestFillWorkItemIDs(result.WorkItemId)
+    filled := SuggestFillWorkItemIDs(result.WorkItemId, linkToWindow)
 
     if (filled)
     {
