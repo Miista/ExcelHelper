@@ -100,6 +100,14 @@ F12::
     Render()
 }
 
+; Right Win + F12
+>#F12::
+{
+    global id := WinGetID("A")
+
+    ManageLinks()
+}
+
 ; Ctrl + Shift + F12
 ^>+F12::
 {
