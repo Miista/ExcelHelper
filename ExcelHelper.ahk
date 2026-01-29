@@ -8,6 +8,7 @@
 
 id := 0
 window := unset
+subWindow := unset
 DEBUG := !A_IsCompiled
 selectParentWindowHwnd := unset
 
@@ -56,23 +57,11 @@ Render()
     fixRowsButton := window.AddButton("", "&Fix Rows (F12)")
     fixRowsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => FixRows()]))
 
-    addLinkButton := window.AddButton("", "Add Re&lated")
-    addLinkButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => AddRelated()]))
-
     manageLinksButton := window.AddButton("", "&Manage Links")
-    manageLinksButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => ManageLinks()]))
-
-    addPredecessorButton := window.AddButton("", "Add &Predecessor")
-    addPredecessorButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => AddPredecessor()]))
-
-    addSuccessorButton := window.AddButton("", "Add &Successor")
-    addSuccessorButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => AddSuccessor()]))
+    manageLinksButton.OnEvent("Click", (*) => Sequence([() => RenderLinkManager()]))
 
     openInWebButton := window.AddButton("", "&Open in Web (Alt-Gr + F12)")
     openInWebButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => OpenInWeb()]))
-
-    reparentButton := window.AddButton("", "R&eparent")
-    reparentButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => ReparentWorkItem()]))
 
     highlightWorkFieldsButton := window.AddButton("", "&Highlight Work Item Fields")
     highlightWorkFieldsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => HighlightWorkItemFields()]))
@@ -81,6 +70,57 @@ Render()
     removeHighlightWorkFieldsButton.OnEvent("Click", (*) => Sequence([() => HideWindow(), () => RemoveHighlightWorkItemFields()]))
 
     window.Show()
+}
+
+RenderLinkManager()
+{
+    global window, subWindow
+
+    subWindow := Gui("+ToolWindow", "Manage Links")
+
+    subWindow.OnEvent("Escape", (*) => HideLinkManager())
+
+    reparentButton := subWindow.AddButton("", "R&eparent")
+    reparentButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => ReparentWorkItem()]))
+
+    addRelatedButton := subWindow.AddButton("", "&Related")
+    addRelatedButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => AddRelated()]))
+
+    addPredecessorButton := subWindow.AddButton("", "&Predecessor")
+    addPredecessorButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => AddPredecessor()]))
+
+    addSuccessorButton := subWindow.AddButton("", "&Successor")
+    addSuccessorButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => AddSuccessor()]))
+
+    manageLinksButton := subWindow.AddButton("", "&Manage Links")
+    manageLinksButton.OnEvent("Click", (*) => Sequence([() => HideLinkManager(true), () => ManageLinks()]))
+
+    if (IsSet(window))
+    {
+        subWindow.Opt("+Owner" window.Hwnd)
+        window.OnEvent("Escape", (*) => {})
+        window.Opt("+Disabled")
+    }
+
+    subWindow.Show()
+}
+
+HideLinkManager(includeParent := false)
+{
+    global subWindow, window
+
+    if (IsSet(window))
+    {
+        window.Opt("-Disabled")
+    }
+
+    subWindow.Destroy()
+    subWindow := unset
+
+    if (includeParent && IsSet(window))
+    {
+        HideWindow()
+    }
 }
 
 HideWindow()
@@ -105,7 +145,7 @@ F12::
 {
     global id := WinGetID("A")
 
-    ManageLinks()
+    RenderLinkManager()
 }
 
 ; Ctrl + Shift + F12
